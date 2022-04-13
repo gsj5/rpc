@@ -1,0 +1,93 @@
+version: '2.3'
+
+x-rnode:
+  &default-rnode
+  image: rchain/rnode:v0.13.0-alpha
+  user: root
+
+########################################################################
+services:
+########################################################################
+
+  node0:
+    << : *default-rnode
+    container_name: node0
+    ports:
+      - 40400:40400
+      - 40402:40402
+      - 40404:40404
+    volumes:
+      - $RNODE_DIR/node0/rnode/:/var/lib/rnode/
+    command:
+      $RNODE_JAVA_CONFIG
+      $RNODE_RUN_CONFIG      --api-max-blocks-limit=3  
+      --host node0.$DOMAIN   --protocol-port 40400 --discovery-port 40404
+
+########################################################################
+  node1:
+    << : *default-rnode
+    container_name: node1
+    ports:
+      - 40410:40410
+      - 40412:40402
+      - 40414:40414
+    volumes:
+      - $RNODE_DIR/node1/rnode/:/var/lib/rnode/
+    command:
+      $RNODE_JAVA_CONFIG
+      $RNODE_RUN_CONFIG      --api-max-blocks-limit=3
+      --host node1.$DOMAIN   --protocol-port 40410 --discovery-port 40414
+
+########################################################################
+  node2:
+    << : *default-rnode
+    container_name: node2
+    ports:
+      - 40420:40420
+      - 40422:40402
+      - 40424:40424
+    volumes:
+      - $RNODE_DIR/node2/rnode/:/var/lib/rnode/
+    command:
+      $RNODE_JAVA_CONFIG
+      $RNODE_RUN_CONFIG      --api-max-blocks-limit=3
+      --host node2.$DOMAIN   --protocol-port 40420 --discovery-port 40424
+
+########################################################################
+  observer:
+    << : *default-rnode
+    container_name: observer
+    ports:
+      - 40450:40450
+      - 40454:40454
+    volumes:
+      - $RNODE_DIR/observer/rnode/:/var/lib/rnode/
+    command:
+      $RNODE_JAVA_CONFIG
+      $RNODE_RUN_CONFIG         --api-max-blocks-limit=100 --api-enable-reporting
+      --host observer.$DOMAIN   --protocol-port 40450 --discovery-port 40454
+
+########################################################################
+  revproxy:
+    image: nginx
+    container_name: revproxy
+    ports:
+      - 443:443
+      - 40401:40401
+    volumes:
+      - $RNODE_DIR/revproxy/conf:/etc/nginx/conf.d:ro
+      - $RNODE_DIR/files/letsencrypt:/etc/letsencrypt:ro
+      - $RNODE_DIR/revproxy/log:/var/log/nginx
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: always
+
+########################################################################
+  logspout:
+    image: gliderlabs/logspout
+    container_name: logspout
+    ports:
+      - 8181:80
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: always
+
